@@ -2,7 +2,9 @@
   "name": "@repo/database",
   "version": "1.0.0",
   "scripts": {
-  
+    "db:generate" : "dotenv -- drizzle-kit generate",
+    "db:migrate" : "dotenv -- drizzle-kit migrate",
+    "dev" : "dotenv -- drizzle-kit studio" 
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

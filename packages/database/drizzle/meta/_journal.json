@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784791492193,
+      "tag": "0000_medical_la_nuit",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786147200000,
+      "tag": "0001_complete_user_registration",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786176559161,
+      "tag": "0002_dry_victor_mancha",
+      "breakpoints": true
+    }
+  ]
+}

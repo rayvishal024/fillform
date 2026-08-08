@@ -1,7 +1,6 @@
+import { z } from 'zod'
 
-import { z } from "zod";
-
-export const createUserWithEmailAndPasswordInput = z.object({
+export const createUserWithEmailAndPasswordInputModel = z.object({
      fullName: z.string().trim().min(2).max(80).describe("Full name of the user"),
      email: z.string().trim().toLowerCase().email().max(254).describe("Email address of the user"),
      password: z.string()
@@ -14,5 +13,6 @@ export const createUserWithEmailAndPasswordInput = z.object({
           .describe("Password of the user"),
 }).strict();
 
-
-export type CreateUserWithEmailAndPasswordInputType = z.infer<typeof createUserWithEmailAndPasswordInput>
+export const createUserWithEmailAndPasswordOutputModel = z.object({
+     id: z.string().describe('Id of user')
+})
