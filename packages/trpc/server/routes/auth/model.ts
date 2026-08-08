@@ -33,3 +33,7 @@ export const loginUserWithGoogleInputModel = z.object({
 export const loginUserWithGoogleOutputModel = z.object({
      id: z.string().describe('Id of authenticated user')
 });
+
+export const logoutOutputModel = z.object({
+     success: z.literal(true),
+});

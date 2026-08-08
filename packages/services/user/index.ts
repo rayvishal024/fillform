@@ -99,6 +99,7 @@ class UserService {
                     audience: googleClientId,
                });
                googleUser = ticket.getPayload();
+
           } catch {
                throw new Error("Invalid Google credentials");
           }

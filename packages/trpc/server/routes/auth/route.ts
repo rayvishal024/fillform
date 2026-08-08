@@ -1,6 +1,8 @@
-import { publicProcedure, router } from "../../trpc";
+import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { TRPCError } from "@trpc/server";
 import { generatePath } from "../../utils/path-generator";
+import { clearSessionCookie, setSessionCookie } from "../../context";
+import SessionService from "@repo/services/session";
 import {
      createUserWithEmailAndPasswordInputModel,
      createUserWithEmailAndPasswordOutputModel,
@@ -8,26 +10,32 @@ import {
      loginUserWithEmailAndPasswordOutputModel,
      loginUserWithGoogleInputModel,
      loginUserWithGoogleOutputModel,
+     logoutOutputModel,
 } from './model'
 import { userService } from "../../services/index"
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
+const sessionService = new SessionService();
 
 export const authRouter = router({
+
      createUserWithEmailAndPassword: publicProcedure
           .meta({
                openapi: {
                     method: 'POST',
                     path: getPath('/createUserWithEmailAndPassword'),
-                    tags : TAGS
-          }})
+                    tags: TAGS
+               }
+          })
           .input(createUserWithEmailAndPasswordInputModel)
           .output(createUserWithEmailAndPasswordOutputModel)
-          .mutation(async ({ input }) => {
-               
+          .mutation(async ({ input, ctx }) => {
+
                try {
                     const result = await userService.createUserWithEmailAndPassword(input);
+                    const sessionToken = await sessionService.create(result);
+                    setSessionCookie(ctx.res, sessionToken);
                     return { id: result };
                } catch (error) {
                     if (error instanceof Error && error.message === "user with Email Already Exist") {
@@ -47,9 +55,11 @@ export const authRouter = router({
           })
           .input(loginUserWithEmailAndPasswordInputModel)
           .output(loginUserWithEmailAndPasswordOutputModel)
-          .mutation(async ({ input }) => {
+          .mutation(async ({ input, ctx }) => {
                try {
                     const result = await userService.loginUserWithEmailAndPassword(input);
+                    const sessionToken = await sessionService.create(result);
+                    setSessionCookie(ctx.res, sessionToken);
                     return { id: result };
                } catch (error) {
                     if (error instanceof Error && error.message === "Invalid email or password") {
@@ -69,9 +79,11 @@ export const authRouter = router({
           })
           .input(loginUserWithGoogleInputModel)
           .output(loginUserWithGoogleOutputModel)
-          .mutation(async ({ input }) => {
+          .mutation(async ({ input, ctx }) => {
                try {
                     const result = await userService.loginUserWithGoogle(input);
+                    const sessionToken = await sessionService.create(result);
+                    setSessionCookie(ctx.res, sessionToken);
                     return { id: result };
                } catch (error) {
                     if (error instanceof Error && [
@@ -84,5 +96,19 @@ export const authRouter = router({
 
                     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to authenticate" });
                }
+          }),
+     logout: protectedProcedure
+          .meta({
+               openapi: {
+                    method: 'POST',
+                    path: getPath('/logout'),
+                    tags: TAGS,
+               },
+          })
+          .output(logoutOutputModel)
+          .mutation(async ({ ctx }) => {
+               await sessionService.revoke(ctx.sessionToken);
+               clearSessionCookie(ctx.res);
+               return { success: true as const };
           }),
 });
