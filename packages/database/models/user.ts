@@ -7,9 +7,9 @@ export const usersTable = t.pgTable('user', {
      email: t.varchar().notNull().unique(),
 
      password: t.varchar('password', { length: 255 }),
+     googleId: t.varchar('google_id', { length: 255 }).unique(),
 
      createdAt: t.timestamp('created_at').defaultNow().notNull(),
      updatedAt: t.timestamp('updated_at').defaultNow().$onUpdate(() => new Date).notNull()
-     
      
 })

@@ -15,4 +15,21 @@ export const createUserWithEmailAndPasswordInputModel = z.object({
 
 export const createUserWithEmailAndPasswordOutputModel = z.object({
      id: z.string().describe('Id of user')
-})
+});
+
+export const loginUserWithEmailAndPasswordInputModel = z.object({
+     email: z.string().trim().toLowerCase().email().max(254).describe("Email address of the user"),
+     password: z.string().min(1).max(100).describe("Password of the user"),
+}).strict();
+
+export const loginUserWithEmailAndPasswordOutputModel = z.object({
+     id: z.string().describe('Id of authenticated user')
+});
+
+export const loginUserWithGoogleInputModel = z.object({
+     idToken: z.string().trim().min(1).max(4096).describe("Google OAuth ID token"),
+}).strict();
+
+export const loginUserWithGoogleOutputModel = z.object({
+     id: z.string().describe('Id of authenticated user')
+});

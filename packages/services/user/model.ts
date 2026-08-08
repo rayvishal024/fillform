@@ -16,3 +16,16 @@ export const createUserWithEmailAndPasswordInput = z.object({
 
 
 export type CreateUserWithEmailAndPasswordInputType = z.infer<typeof createUserWithEmailAndPasswordInput>
+
+export const loginUserWithEmailAndPasswordInput = z.object({
+     email: z.string().trim().toLowerCase().email().max(254).describe("Email address of the user"),
+     password: z.string().min(1).max(100).describe("Password of the user"),
+}).strict();
+
+export type LoginUserWithEmailAndPasswordInputType = z.infer<typeof loginUserWithEmailAndPasswordInput>;
+
+export const loginUserWithGoogleInput = z.object({
+     idToken: z.string().trim().min(1).max(4096).describe("Google OAuth ID token"),
+}).strict();
+
+export type LoginUserWithGoogleInputType = z.infer<typeof loginUserWithGoogleInput>;
