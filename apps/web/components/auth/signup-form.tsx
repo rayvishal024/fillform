@@ -13,6 +13,7 @@ import { cn } from "~/lib/utils"
 import { trpc } from "~/trpc/client"
 
 const signupSchema = z.object({
+
   fullName: z.string().trim().min(2, "Enter your full name").max(80),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
   password: z.string()
@@ -31,11 +32,13 @@ const signupSchema = z.object({
 type SignupValues = z.infer<typeof signupSchema>
 
 export function SignupForm({ className, ...props }: React.ComponentProps<"form">) {
+
   const router = useRouter()
   const form = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
   })
+  
   const createUser = trpc.auth.createUserWithEmailAndPassword.useMutation({
     onSuccess: () => router.push("/dashboard"),
   })

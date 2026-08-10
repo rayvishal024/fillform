@@ -42,4 +42,5 @@ export const currentUserOutputModel = z.object({
      id: z.string(),
      fullName: z.string(),
      email: z.string().email(),
+     avatarUrl: z.string().url().nullable(),
 });

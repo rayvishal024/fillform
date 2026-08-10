@@ -26,6 +26,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"form">)
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   })
+  
   const login = trpc.auth.loginUserWithEmailAndPassword.useMutation({
     onSuccess: () => router.push("/dashboard"),
   })

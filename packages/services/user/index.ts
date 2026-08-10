@@ -42,6 +42,7 @@ class UserService {
                id: usersTable.id,
                fullName: usersTable.fullName,
                email: usersTable.email,
+               avatarUrl: usersTable.avatarUrl,
           }).from(usersTable).where(eq(usersTable.id, userId));
 
           if (!user) {
@@ -143,6 +144,7 @@ class UserService {
                     fullName: googleUser.name || "Google User",
                     email,
                     googleId: googleUser.sub,
+                    avatarUrl: googleUser.picture,
                }).returning({ id: usersTable.id });
 
                if (!user) {

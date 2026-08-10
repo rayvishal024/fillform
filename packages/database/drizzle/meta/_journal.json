@@ -8,6 +8,13 @@
       "when": 1786189070614,
       "tag": "0000_deep_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786189200000,
+      "tag": "0001_add_user_avatar",
+      "breakpoints": true
     }
   ]
 }
