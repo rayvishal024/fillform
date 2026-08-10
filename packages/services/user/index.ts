@@ -37,6 +37,20 @@ class UserService {
           return result[0];
      }
 
+     public async getCurrentUser(userId: string) {
+          const [user] = await db.select({
+               id: usersTable.id,
+               fullName: usersTable.fullName,
+               email: usersTable.email,
+          }).from(usersTable).where(eq(usersTable.id, userId));
+
+          if (!user) {
+               throw new Error("User not found");
+          }
+
+          return user;
+     }
+
      public async createUserWithEmailAndPassword(payload: CreateUserWithEmailAndPasswordInputType) {
           const { fullName, email, password } = await createUserWithEmailAndPasswordInput.parseAsync(payload);
 

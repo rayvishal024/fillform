@@ -11,6 +11,7 @@ import {
      loginUserWithGoogleInputModel,
      loginUserWithGoogleOutputModel,
      logoutOutputModel,
+     currentUserOutputModel,
 } from './model'
 import { userService } from "../../services/index"
 
@@ -81,6 +82,7 @@ export const authRouter = router({
           .output(loginUserWithGoogleOutputModel)
           .mutation(async ({ input, ctx }) => {
                try {
+
                     const result = await userService.loginUserWithGoogle(input);
                     const sessionToken = await sessionService.create(result);
                     setSessionCookie(ctx.res, sessionToken);
@@ -110,5 +112,21 @@ export const authRouter = router({
                await sessionService.revoke(ctx.sessionToken);
                clearSessionCookie(ctx.res);
                return { success: true as const };
+          }),
+     getCurrentUser: protectedProcedure
+          .meta({
+               openapi: {
+                    method: 'GET',
+                    path: getPath('/me'),
+                    tags: TAGS,
+               },
+          })
+          .output(currentUserOutputModel)
+          .query(async ({ ctx }) => {
+               try {
+                    return await userService.getCurrentUser(ctx.userId);
+               } catch {
+                    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
+               }
           }),
 });

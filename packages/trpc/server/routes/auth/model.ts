@@ -37,3 +37,9 @@ export const loginUserWithGoogleOutputModel = z.object({
 export const logoutOutputModel = z.object({
      success: z.literal(true),
 });
+
+export const currentUserOutputModel = z.object({
+     id: z.string(),
+     fullName: z.string(),
+     email: z.string().email(),
+});

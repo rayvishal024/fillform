@@ -19,7 +19,7 @@ export type AuthContext = {
 
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
-const isProduction = String(process.env.NODE_ENV) === "prod";
+const isProduction = ["prod", "production"].includes(String(process.env.NODE_ENV));
 
 function cookieName() {
 	return isProduction ? "__Secure-session" : "session";
