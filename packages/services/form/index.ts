@@ -1,15 +1,29 @@
 import { randomBytes } from "node:crypto";
-import {and,count, db,desc,eq,isNull,
-} from "@repo/database";
-import { formResponses, forms } from "@repo/database/schema";
 import {
+     and,
+     asc,
+     count,
+     db,
+     desc,
+     eq,
+     isNull,
+     max,
+} from "@repo/database";
+import { formFields, formResponses, forms } from "@repo/database/schema";
+import {
+     createFormFieldInput,
      createFormInput,
      formStatusSchema,
      listFormsInput,
+     reorderFormFieldsInput,
+     updateFormFieldInput,
      updateFormInput,
      updateFormSlugInput,
+     type CreateFormFieldInput,
      type CreateFormInput,
      type ListFormsInput,
+     type ReorderFormFieldsInput,
+     type UpdateFormFieldInput,
      type UpdateFormInput,
      type UpdateFormSlugInput,
 } from "./model";
@@ -27,6 +41,8 @@ const RESERVED_SLUGS = new Set([
 
 const MAX_SLUG_ATTEMPTS = 5;
 
+type FormFieldSummary = typeof formFields.$inferSelect;
+
 type FormSummary = {
      id: number;
      title: string;
@@ -37,6 +53,7 @@ type FormSummary = {
      createdAt: Date;
      updatedAt: Date;
      responseCount: number;
+     fields: FormFieldSummary[];
 };
 
 function isUniqueViolation(error: unknown) {
@@ -80,7 +97,51 @@ function formColumns() {
      };
 }
 
+function fieldColumns() {
+     return {
+          id: formFields.id,
+          formId: formFields.formId,
+          type: formFields.type,
+          label: formFields.label,
+          placeholder: formFields.placeholder,
+          helpText: formFields.helpText,
+          isRequired: formFields.isRequired,
+          orderIndex: formFields.orderIndex,
+          options: formFields.options,
+          validation: formFields.validation,
+          createdAt: formFields.createdAt,
+          updatedAt: formFields.updatedAt,
+     };
+}
+
 class FormService {
+     // Lightweight in-memory draft storage: key = `${userId}:${formId}`
+     private fieldDrafts: Map<string, unknown> = new Map()
+     private async ensureOwnedForm(userId: string, formId: number) {
+          const [form] = await db
+               .select({ id: forms.id })
+               .from(forms)
+               .where(
+                    and(
+                         eq(forms.id, formId),
+                         eq(forms.userId, userId),
+                         isNull(forms.deletedAt),
+                    ),
+               );
+
+          if (!form) {
+               throw new Error("Form not found");
+          }
+     }
+
+     private async loadFormFields(formId: number) {
+          return db
+               .select(fieldColumns())
+               .from(formFields)
+               .where(eq(formFields.formId, formId))
+               .orderBy(asc(formFields.orderIndex), asc(formFields.id));
+     }
+
      public async create(userId: string, payload: CreateFormInput) {
           const input = createFormInput.parse(payload);
           const baseSlug = slugify(input.title);
@@ -159,6 +220,150 @@ class FormService {
                items: data,
                nextOffset: hasMore ? input.offset + input.limit : null,
           };
+     }
+
+     public async createField(userId: string, payload: CreateFormFieldInput) {
+          const input = createFormFieldInput.parse(payload);
+          await this.ensureOwnedForm(userId, input.formId);
+
+          const [maxRow] = await db
+               .select({ maxIndex: max(formFields.orderIndex) })
+               .from(formFields)
+               .where(eq(formFields.formId, input.formId));
+
+          const orderIndex = (maxRow?.maxIndex ?? -1) + 1;
+          const [field] = await db
+               .insert(formFields)
+               .values({
+                    formId: input.formId,
+                    type: input.type,
+                    label: input.label,
+                    placeholder: input.placeholder,
+                    helpText: input.helpText,
+                    isRequired: input.isRequired ?? false,
+                    orderIndex,
+                    options: input.options ?? null,
+                    validation: input.validation ?? null,
+               })
+               .returning(fieldColumns());
+
+          if (!field) {
+               throw new Error("Unable to create field");
+          }
+
+          return field;
+
+     }
+
+     public async saveFieldDraft(userId: string, formId: number, draft: unknown) {
+                    await this.ensureOwnedForm(userId, formId)
+                    const key = `${userId}:${formId}`
+                    this.fieldDrafts.set(key, draft)
+                    return { success: true as const }
+               }
+
+               public async getFieldDraft(userId: string, formId: number) {
+                    await this.ensureOwnedForm(userId, formId)
+                    const key = `${userId}:${formId}`
+                    const draft = this.fieldDrafts.get(key)
+                    return { draft: draft ?? null }
+               }
+
+               public async clearFieldDraft(userId: string, formId: number) {
+                    await this.ensureOwnedForm(userId, formId)
+                    const key = `${userId}:${formId}`
+                    this.fieldDrafts.delete(key)
+                    return { success: true as const }
+               }
+
+
+     public async updateField(userId: string, payload: UpdateFormFieldInput) {
+          const { fieldId, type, label, placeholder, helpText, isRequired, options, validation } = updateFormFieldInput.parse(payload);
+
+          const [field] = await db
+               .select({ formId: formFields.formId })
+               .from(formFields)
+               .where(eq(formFields.id, fieldId));
+
+          if (!field) {
+               throw new Error("Field not found");
+          }
+
+          await this.ensureOwnedForm(userId, field.formId);
+
+          const values = {
+               ...(type !== undefined ? { type } : {}),
+               ...(label !== undefined ? { label } : {}),
+               ...(placeholder !== undefined ? { placeholder } : {}),
+               ...(helpText !== undefined ? { helpText } : {}),
+               ...(isRequired !== undefined ? { isRequired } : {}),
+               ...(options !== undefined ? { options } : {}),
+               ...(validation !== undefined ? { validation } : {}),
+          };
+
+          const [updatedField] = await db
+               .update(formFields)
+               .set(values)
+               .where(eq(formFields.id, fieldId))
+               .returning(fieldColumns());
+
+          if (!updatedField) {
+               throw new Error("Field not found");
+          }
+
+          return updatedField;
+     }
+
+     public async deleteField(userId: string, fieldId: number) {
+          const [field] = await db
+               .select({ formId: formFields.formId })
+               .from(formFields)
+               .where(eq(formFields.id, fieldId));
+
+          if (!field) {
+               throw new Error("Field not found");
+          }
+
+          await this.ensureOwnedForm(userId, field.formId);
+
+          const [deletedField] = await db.delete(formFields).where(eq(formFields.id, fieldId)).returning({ id: formFields.id });
+
+          if (!deletedField) {
+               throw new Error("Field not found");
+          }
+
+          return { success: true as const };
+     }
+
+     public async reorderFields(userId: string, payload: ReorderFormFieldsInput) {
+          const { formId, fieldIds } = reorderFormFieldsInput.parse(payload);
+          await this.ensureOwnedForm(userId, formId);
+
+          if (fieldIds.length !== new Set(fieldIds).size) {
+               throw new Error("Invalid field order");
+          }
+
+          const fields = await db
+               .select({ id: formFields.id })
+               .from(formFields)
+               .where(eq(formFields.formId, formId));
+
+          const existingFieldIds = new Set(fields.map((item) => item.id));
+
+          if (
+               fieldIds.length !== fields.length ||
+               fieldIds.some((fieldId) => !existingFieldIds.has(fieldId))
+          ) {
+               throw new Error("Invalid field order");
+          }
+
+          await Promise.all(
+               fieldIds.map((fieldId, index) =>
+                    db.update(formFields).set({ orderIndex: index }).where(eq(formFields.id, fieldId)),
+               ),
+          );
+
+          return { success: true as const };
      }
 
      public async update(userId: string, payload: UpdateFormInput): Promise<FormSummary> {
@@ -273,7 +478,12 @@ class FormService {
                throw new Error("Form not found");
           }
 
-          return form;
+          const fields = await this.loadFormFields(formId);
+
+          return {
+               ...form,
+               fields,
+          };
      }
 }
 
