@@ -2,7 +2,11 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["./src/index.ts"],
-  noExternal: ["@teachyst"], // transpile packages starting with `@teachyst` and their dependencies
+  noExternal: [
+    "@repo/logger",
+    "@repo/database",
+    "@repo/trpc",
+    "@repo/services"], // transpile packages starting with `@teachyst` and their dependencies
   splitting: false,
   bundle: true,
   outDir: "./dist",
